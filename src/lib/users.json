@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1754949711445",
+    "username": "khcuong",
+    "email": "sangam@gmail.com",
+    "password": "182003",
+    "isAdmin": false,
+    "createdAt": "2025-08-11T22:01:51.445Z"
+  },
+  {
+    "id": "1754950126679",
+    "username": "kyanh",
+    "email": "khuongcuong59@gmail.com",
+    "password": "182003",
+    "isAdmin": false,
+    "createdAt": "2025-08-11T22:08:46.679Z"
+  }
+]
