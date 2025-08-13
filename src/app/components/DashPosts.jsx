@@ -1,6 +1,6 @@
 'use client';
 import { Button, Modal, Table } from 'flowbite-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { HiOutlineExclamationCircle } from 'react-icons/hi';
 
@@ -10,35 +10,54 @@ export default function DashPosts() {
   const [showModal, setShowModal] = useState(false);
   const [postIdToDelete, setPostIdToDelete] = useState('');
 
+  // Lưu user vào ref để luôn lấy đúng khi fetch lại
+  const userRef = useRef(null);
+
+  // Hàm fetchPosts: admin lấy toàn bộ post, user thường chỉ lấy post của mình
+  const fetchPosts = useCallback(async (user) => {
+    if (!user) return;
+    try {
+      const body = user.isAdmin
+        ? { limit: 1000 }
+        : { userId: user.userId };
+      const res = await fetch('/api/post/get', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserPosts(data.posts);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  }, []);
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
       setUser(parsedUser);
-      if (parsedUser.isAdmin) {
-        const fetchPosts = async () => {
-          try {
-            const res = await fetch('/api/post/get', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                userId: parsedUser.userMongoId,
-              }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-              setUserPosts(data.posts);
-            }
-          } catch (error) {
-            console.log(error.message);
-          }
-        };
-        fetchPosts();
-      }
+      userRef.current = parsedUser;
+      fetchPosts(parsedUser);
     }
-  }, []);
+  }, [fetchPosts]);
+
+  useEffect(() => {
+    // Lắng nghe event postsChanged để tự động fetch lại posts
+    const handlePostsChanged = () => {
+      if (userRef.current) {
+        fetchPosts(userRef.current);
+      }
+    };
+    window.addEventListener('postsChanged', handlePostsChanged);
+    return () => {
+      window.removeEventListener('postsChanged', handlePostsChanged);
+    };
+  }, [fetchPosts]);
 
   const handleDeletePost = async () => {
     setShowModal(false);
@@ -50,16 +69,19 @@ export default function DashPosts() {
         },
         body: JSON.stringify({
           postId: postIdToDelete,
-          userId: user?.userMongoId,
+          userId: user.userId,      // truyền userId để API xác thực
+          isAdmin: user.isAdmin,
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        const newPosts = userPosts.filter(
-          (post) => post._id !== postIdToDelete
-        );
-        setUserPosts(newPosts);
         setPostIdToDelete('');
+        // Fetch lại danh sách post mới nhất trước khi phát event
+        if (userRef.current) {
+          await fetchPosts(userRef.current);
+        }
+        // Phát event để các component khác có thể lắng nghe và cập nhật
+        window.dispatchEvent(new Event('postsChanged'));
       } else {
         console.log(data.message);
       }
@@ -68,17 +90,17 @@ export default function DashPosts() {
     }
   };
 
-  if (!user?.isAdmin) {
+  if (!user) {
     return (
       <div className='flex flex-col items-center justify-center h-full w-full py-7'>
-        <h1 className='text-2xl font-semibold'>You are not an admin!</h1>
+        <h1 className='text-2xl font-semibold'>You are not logged in!</h1>
       </div>
     );
   }
 
   return (
     <div className='table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500'>
-      {user?.isAdmin && userPosts.length > 0 ? (
+      {userPosts.length > 0 ? (
         <>
           <Table hoverable className='shadow-md'>
             <Table.Head>
@@ -93,9 +115,9 @@ export default function DashPosts() {
             </Table.Head>
             <Table.Body className='divide-y'>
               {userPosts.map((post) => (
-                <Table.Row className='bg-white dark:border-gray-700 dark:bg-gray-800' key={post._id}>
+                <Table.Row className='bg-white dark:border-gray-700 dark:bg-gray-800' key={post.id}>
                   <Table.Cell>
-                    {new Date(post.updatedAt).toLocaleDateString()}
+                    {new Date(post.updatedAt || post.createdAt).toLocaleDateString()}
                   </Table.Cell>
                   <Table.Cell>
                     <Link href={`/post/${post.slug}`}>
@@ -120,7 +142,7 @@ export default function DashPosts() {
                       className='font-medium text-red-500 hover:underline cursor-pointer'
                       onClick={() => {
                         setShowModal(true);
-                        setPostIdToDelete(post._id);
+                        setPostIdToDelete(post.id);
                       }}
                     >
                       Delete
@@ -129,7 +151,7 @@ export default function DashPosts() {
                   <Table.Cell>
                     <Link
                       className='text-teal-500 hover:underline'
-                      href={`/dashboard/update-post/${post._id}`}
+                      href={`/dashboard/update-post/${post.id}`}
                     >
                       <span>Edit</span>
                     </Link>

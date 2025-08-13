@@ -1,19 +1,27 @@
-import Post from '../../../../lib/models/post.model';
-import { connect } from '../../../../lib/mongodb/mongoose';
-import { currentUser } from '@clerk/nextjs/server';
+
+import fs from 'fs';
+import path from 'path';
 
 export const DELETE = async (req) => {
-  const user = await currentUser();
   try {
-    await connect();
     const data = await req?.json();
-    if (
-      !user.publicMetadata.isAdmin ||
-      user.publicMetadata.userMongoId !== data.userId
-    ) {
+    // Xác thực admin từ request body
+    if (!data.isAdmin || !data.userId) {
       return new Response('Unauthorized', { status: 401 });
     }
-    await Post.findByIdAndDelete(data.postId);
+    // Xóa post khỏi file posts.json (giả lập localStorage server-side)
+    const postsFile = path.join(process.cwd(), 'src/data/posts.json');
+    let posts = [];
+    if (fs.existsSync(postsFile)) {
+      const fileData = fs.readFileSync(postsFile, 'utf-8');
+      posts = JSON.parse(fileData || '[]');
+    }
+    const beforeCount = posts.length;
+    posts = posts.filter(post => post.id !== data.postId);
+    if (posts.length === beforeCount) {
+      return new Response('Post not found', { status: 404 });
+    }
+    fs.writeFileSync(postsFile, JSON.stringify(posts, null, 2), 'utf-8');
     return new Response('Post deleted', { status: 200 });
   } catch (error) {
     console.log('Error deleting post:', error);

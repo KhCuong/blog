@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const usersFile = path.resolve(process.cwd(), 'src/lib/users.json');
+const usersFile = path.resolve(process.cwd(), 'src/data/users.json');
 
 export async function POST(req) {
     try {

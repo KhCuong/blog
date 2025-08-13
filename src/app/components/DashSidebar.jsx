@@ -1,16 +1,21 @@
 'use client';
 
+import { Sidebar } from 'flowbite-react';
+import {
+  HiArrowSmRight,
+  HiDocumentText,
+  HiOutlineUserGroup,
+  HiChartPie,
+} from 'react-icons/hi';
+import { HiUser } from 'react-icons/hi2'; // import riêng nếu nó ở hi2
+
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-export default function DashSidebar() {
-  const [tab, setTab] = useState('');
-  const searchParams = useSearchParams();
-  const [user, setUser] = useState(null);
-  // Đảm bảo hooks luôn được gọi đúng thứ tự
-  const [showDropdown, setShowDropdown] = useState(false);
-  const avatarRef = useRef(null);
 
+// Custom useUser hook to mimic Clerk
+function useUser() {
+  const [user, setUser] = useState(null);
   useEffect(() => {
     const updateUser = () => {
       const storedUser = localStorage.getItem('user');
@@ -18,24 +23,24 @@ export default function DashSidebar() {
     };
     updateUser();
     window.addEventListener('userChanged', updateUser);
-    return () => {
-      window.removeEventListener('userChanged', updateUser);
-    };
-  }, [searchParams]);
-  useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams);
-    const tabFromUrl = urlParams.get('tab');
-    if (tabFromUrl) {
-      setTab(tabFromUrl);
-    }
-  }, [searchParams]);
+    return () => window.removeEventListener('userChanged', updateUser);
+  }, []);
+  return { user };
+}
+export default function DashSidebar() {
+  const { user } = useUser();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const dropdownRef = useRef(null);
+  const accountMenuRef = useRef(null);
+  const router = useRouter();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     if (!showDropdown) return;
     const handleClick = (e) => {
-      if (avatarRef.current && !avatarRef.current.contains(e.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
+        setShowAccountMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -43,82 +48,61 @@ export default function DashSidebar() {
   }, [showDropdown]);
 
   if (!user) {
-    return (
-      <div className='p-4 text-center'>Bạn chưa đăng nhập.</div>
-    );
+    return <div className='p-4 text-center'>Bạn chưa đăng nhập.</div>;
   }
 
-  // ...existing code...
-  // Sidebar menu cho admin
   return (
-    <div className='w-full md:w-56 pt-6'>
-      <img
-        src={user.profilePicture || '/avatar.png'}
-        alt='avatar'
-        className='mx-auto mb-4 w-16 h-16 rounded-full border-2 border-teal-500 object-cover shadow-lg'
-      />
-      <Sidebar className='w-full'>
-        <Sidebar.Items>
-          <Sidebar.ItemGroup className='flex flex-col gap-1'>
-            {user?.publicMetadata?.isAdmin && (
-              <Link href='/dashboard?tab=dash'>
-                <Sidebar.Item
-                  active={tab === 'dash' || !tab}
-                  icon={HiChartPie}
-                  as='div'
-                >
-                  Dashboard
-                </Sidebar.Item>
-              </Link>
-            )}
-            <Link href='/dashboard?tab=profile'>
-              <Sidebar.Item
-                active={tab === 'profile'}
-                icon={HiUser}
-                label={user?.publicMetadata?.isAdmin ? 'Admin' : 'User'}
-                labelColor='dark'
-                as='div'
-              >
-                Profile
-              </Sidebar.Item>
-            </Link>
-            {user?.publicMetadata?.isAdmin && (
-              <Link href='/dashboard?tab=posts'>
-                <Sidebar.Item
-                  active={tab === 'posts'}
-                  icon={HiDocumentText}
-                  as='div'
-                >
-                  Posts
-                </Sidebar.Item>
-              </Link>
-            )}
-            {user?.publicMetadata?.isAdmin && (
-              <Link href='/dashboard?tab=users'>
-                <Sidebar.Item
-                  active={tab === 'users'}
-                  icon={HiOutlineUserGroup}
-                  as='div'
-                >
-                  Users
-                </Sidebar.Item>
-              </Link>
-            )}
-            <Sidebar.Item icon={HiArrowSmRight} className='cursor-pointer'>
+    <div className='w-full md:w-56 pt-6 flex flex-col items-center'>
+      <div className='relative w-full flex flex-col items-center'>
+        <img
+          src={user.profilePicture || '/avatar.png'}
+          alt='avatar'
+          className='mx-auto mb-4 w-10 h-10 rounded-full border-2 border-teal-500 object-cover shadow-lg cursor-pointer transition-transform hover:scale-105'
+          onClick={() => setShowDropdown((prev) => !prev)}
+        />
+        {showDropdown && (
+          <>
+            <div
+              className='fixed inset-0 bg-black bg-opacity-20 z-40'
+              onClick={() => {
+                setShowDropdown(false);
+                setShowAccountMenu(false);
+              }}
+            />
+            <div
+              ref={dropdownRef}
+              className='absolute left-1/2 -translate-x-1/2 mt-2 w-60 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1'
+              onClick={e => e.stopPropagation()}
+            >
+              <div className='flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700 mb-1'>
+                <HiUser className='text-teal-500' />
+                <span className='font-semibold'>{user.username}</span>
+              </div>
               <button
-                className='w-full text-left px-2 py-2 text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded'
+                className='block w-full text-left px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold'
                 onClick={() => {
-                  localStorage.removeItem('user');
-                  window.dispatchEvent(new Event('userChanged'));
-                  window.location.href = '/';
+                  setShowDropdown(false);
+                  router.push('/dashboard?tab=profile');
                 }}
               >
-                Sign out
+                Quản lý tài khoản
               </button>
-            </Sidebar.Item>
-          </Sidebar.ItemGroup>
-        </Sidebar.Items>
-      </Sidebar>
+              <button
+                className='block w-full text-left px-4 py-2 text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mt-2'
+                onClick={() => {
+                  setShowDropdown(false);
+                  setShowAccountMenu(false);
+                  localStorage.removeItem('user');
+                  window.dispatchEvent(new Event('userChanged'));
+                  router.replace('/');
+                }}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

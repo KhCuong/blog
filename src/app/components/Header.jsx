@@ -45,11 +45,7 @@ export default function Header() {
     };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    router.push('/');
-  };
+
 
   return (
     <Navbar className='border-b-2'>
@@ -85,9 +81,9 @@ export default function Header() {
           {theme === 'light' ? <FaSun /> : <FaMoon />}
         </Button>
         {user ? (
-          <>
-            <DashSidebar></DashSidebar>
-          </>
+
+          <DashSidebar></DashSidebar>
+
         ) : (
           <Link href='/sign-in'>
             <Button gradientDuoTone='purpleToBlue' outline>
@@ -106,11 +102,6 @@ export default function Header() {
         <Link href='/about'>
           <Navbar.Link active={path === '/about'} as={'div'}>
             About
-          </Navbar.Link>
-        </Link>
-        <Link href='/projects'>
-          <Navbar.Link active={path === '/projects'} as={'div'}>
-            Projects
           </Navbar.Link>
         </Link>
       </Navbar.Collapse>

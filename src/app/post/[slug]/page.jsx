@@ -4,10 +4,12 @@ import { Button } from 'flowbite-react';
 import Link from 'next/link';
 export default async function PostPage({ params }) {
   let post = null;
+  const awaitedParams = typeof params?.then === 'function' ? await params : params;
+  const slug = awaitedParams?.slug;
   try {
     const result = await fetch(process.env.URL + '/api/post/get', {
       method: 'POST',
-      body: JSON.stringify({ slug: params.slug }),
+      body: JSON.stringify({ slug }),
       cache: 'no-store',
     });
     const data = await result.json();

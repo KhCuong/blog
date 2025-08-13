@@ -3,7 +3,7 @@
     "id": "1754949711445",
     "username": "khcuong",
     "email": "sangam@gmail.com",
-    "password": "182003",
+    "password": "462001",
     "isAdmin": false,
     "createdAt": "2025-08-11T22:01:51.445Z"
   },
@@ -14,5 +14,13 @@
     "password": "182003",
     "isAdmin": false,
     "createdAt": "2025-08-11T22:08:46.679Z"
+  },
+  {
+    "id": "1754966987316",
+    "username": "admin",
+    "email": "admin@gmail.com",
+    "password": "admin",
+    "isAdmin": true,
+    "createdAt": "2025-08-12T02:49:47.316Z"
   }
 ]
