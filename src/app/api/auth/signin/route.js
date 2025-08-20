@@ -1,9 +1,13 @@
-
 import fs from 'fs/promises';
 import path from 'path';
-import { setSession } from '../../sessionStore';
+import crypto from 'crypto';
 
 const usersFile = path.resolve(process.cwd(), 'src/data/users.json');
+
+// Hàm hash mật khẩu bằng SHA256
+function hashPassword(password) {
+    return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 export async function POST(req) {
     try {
@@ -15,19 +19,16 @@ export async function POST(req) {
         } catch (err) {
             users = [];
         }
+        // Hash mật khẩu nhập vào để so sánh
+        const hashedPassword = hashPassword(password);
         // Kiểm tra user
-        const user = users.find(u => u.email === email && u.password === password);
+        const user = users.find(u => u.email === email && u.password === hashedPassword);
         if (!user) {
             return new Response(JSON.stringify({ message: 'Invalid credentials' }), { status: 401 });
         }
-        // Đảm bảo trả về user có userId và sessionId
-        const sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        // Đảm bảo trả về user có userId
         const userWithUserId = { ...user, userId: user.id };
-        setSession(sessionId, userWithUserId);
-        // Gửi sessionId về client qua cookie
-        const res = new Response(JSON.stringify({ message: 'Sign in successful!', user: userWithUserId }), { status: 200 });
-        res.headers.set('Set-Cookie', `sessionId=${sessionId}; Path=/; HttpOnly; SameSite=Lax`);
-        return res;
+        return new Response(JSON.stringify({ message: 'Sign in successful!', user: userWithUserId }), { status: 200 });
     } catch (error) {
         return new Response(JSON.stringify({ message: 'Sign in failed' }), { status: 500 });
     }

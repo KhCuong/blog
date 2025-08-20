@@ -1,37 +1,19 @@
 'use client';
-import { Button, Navbar, TextInput } from 'flowbite-react';
+import { Button, Navbar } from 'flowbite-react';
 import Link from 'next/link';
-import { AiOutlineSearch } from 'react-icons/ai';
 import { FaMoon, FaSun } from 'react-icons/fa';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import DashSidebar from './DashSidebar';
+
 export default function Header() {
   const path = usePathname();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const searchParams = useSearchParams();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const urlParams = new URLSearchParams(searchParams);
-    urlParams.set('searchTerm', searchTerm);
-    const searchQuery = urlParams.toString();
-    router.push(`/search?${searchQuery}`);
-  };
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams);
-    const searchTermFromUrl = urlParams.get('searchTerm');
-    if (searchTermFromUrl) {
-      setSearchTerm(searchTermFromUrl);
-    }
-  }, [searchParams]);
-  // Lấy user từ localStorage
   const [user, setUser] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const updateUser = () => {
@@ -45,33 +27,41 @@ export default function Header() {
     };
   }, []);
 
-
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <Navbar className='border-b-2'>
+    <Navbar className={`border-b-2 site-header fixed top-0 left-0 right-0 z-50 ${scrolled ? 'scrolled' : ''}`}>
+      {/* Logo */}
       <Link
         href='/'
         className='self-center whitespace-nowrap text-sm sm:text-xl font-semibold dark:text-white'
       >
         <span className='px-2 py-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg text-white'>
-          Sahand&apos;s
+          Blog
         </span>
-        Blog
       </Link>
-      <form onSubmit={handleSubmit}>
-        <TextInput
-          type='text'
-          placeholder='Search...'
-          rightIcon={AiOutlineSearch}
-          className='hidden lg:inline'
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </form>
-      <Button className='w-12 h-10 lg:hidden' color='gray' pill>
-        <AiOutlineSearch />
-      </Button>
-      <div className='flex gap-2 md:order-2'>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 md:order-2 ml-auto">
+        {/* Inline nav links (desktop only) placed immediately before theme button */}
+        <div className="hidden md:flex items-center gap-3 mr-2">
+          <Link href='/' className={`text-sm px-2 py-1 rounded ${path === '/' ? 'bg-slate-100 font-semibold' : 'hover:bg-slate-50'}`}>
+            Trang chủ
+          </Link>
+          <Link href='/about' className={`text-sm px-2 py-1 rounded ${path === '/about' ? 'bg-slate-100 font-semibold' : 'hover:bg-slate-50'}`}>
+            Giới thiệu
+          </Link>
+          <Link href='/dashboard/create-post' className={`text-sm px-2 py-1 rounded ${path === '/dashboard/create-post' ? 'bg-slate-100 font-semibold' : 'hover:bg-slate-50'}`}>
+            Tạo bài viết
+          </Link>
+        </div>
+
+        {/* Nút đổi theme */}
         <Button
           className='w-12 h-10 hidden sm:inline'
           color='gray'
@@ -80,31 +70,20 @@ export default function Header() {
         >
           {theme === 'light' ? <FaSun /> : <FaMoon />}
         </Button>
+
+        {/* User / Đăng nhập */}
         {user ? (
-
-          <DashSidebar></DashSidebar>
-
+          <DashSidebar />
         ) : (
           <Link href='/sign-in'>
             <Button gradientDuoTone='purpleToBlue' outline>
-              Sign In
+              Đăng nhập
             </Button>
           </Link>
         )}
+
         <Navbar.Toggle />
       </div>
-      <Navbar.Collapse>
-        <Link href='/'>
-          <Navbar.Link active={path === '/'} as={'div'}>
-            Home
-          </Navbar.Link>
-        </Link>
-        <Link href='/about'>
-          <Navbar.Link active={path === '/about'} as={'div'}>
-            About
-          </Navbar.Link>
-        </Link>
-      </Navbar.Collapse>
     </Navbar>
   );
 }

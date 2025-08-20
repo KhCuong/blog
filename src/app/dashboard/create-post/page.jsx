@@ -46,6 +46,8 @@ export default function CreatePostPage() {
   const [imageUploadError, setImageUploadError] = useState(null);
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('uncategorized');
+  const [categoryCustom, setCategoryCustom] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -61,15 +63,18 @@ export default function CreatePostPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const finalCategory = categoryCustom?.trim() || selectedCategory;
       const res = await fetch('/api/post/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData
+          ...formData,
+          category: finalCategory,
+          userId: user?.userId,
+          isAdmin: user?.isAdmin,
         }),
-        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) {
@@ -78,6 +83,8 @@ export default function CreatePostPage() {
       }
       if (res.ok) {
         setPublishError(null);
+        // Phát event để các component khác (vd. DashPosts) tự fetch lại
+        window.dispatchEvent(new Event('postsChanged'));
         router.push(`/post/${data.slug}`);
       }
     } catch (error) {
@@ -89,12 +96,13 @@ export default function CreatePostPage() {
     return null;
   }
 
+  // Hiển thị form cho mọi user đã đăng nhập (không yêu cầu là admin)
   if (user) {
     return (
       <div className='p-3 max-w-3xl mx-auto min-h-screen'>
-        <h1 className='text-center text-3xl my-7 font-semibold'>
-          Create a post
-        </h1>
+        {/* <h1 className='text-center text-3xl my-7 font-semibold'>
+          Tạo bài viết
+        </h1> */}
         <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
           <div className='flex flex-col gap-4 sm:flex-row justify-between'>
             <TextInput
@@ -107,7 +115,17 @@ export default function CreatePostPage() {
                 setFormData({ ...formData, title: e.target.value })
               }
             />
+            <div className='flex-1'>
+
+              <TextInput
+                placeholder='Chuyên mục'
+                value={categoryCustom}
+                onChange={(e) => setCategoryCustom(e.target.value)}
+              />
+            </div>
           </div>
+
+
           <div className='flex gap-4 items-center justify-between border-4 border-teal-500 border-dotted p-3'>
             <FileInput
               type='file'
@@ -156,7 +174,7 @@ export default function CreatePostPage() {
             }}
           />
           <Button type='submit' gradientDuoTone='purpleToPink'>
-            Publish
+            Đăng bài
           </Button>
         </form>
       </div>
@@ -164,7 +182,7 @@ export default function CreatePostPage() {
   } else {
     return (
       <h1 className='text-center text-3xl my-7 font-semibold'>
-        Cần đăng nhập
+        Bạn cần đăng nhập để tạo bài viết
       </h1>
     );
   }

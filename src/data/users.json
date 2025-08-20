@@ -1,26 +1,26 @@
 [
   {
-    "id": "1754949711445",
-    "username": "khcuong",
-    "email": "sangam@gmail.com",
-    "password": "462001",
-    "isAdmin": false,
-    "createdAt": "2025-08-11T22:01:51.445Z"
-  },
-  {
-    "id": "1754950126679",
-    "username": "kyanh",
-    "email": "khuongcuong59@gmail.com",
-    "password": "182003",
-    "isAdmin": false,
-    "createdAt": "2025-08-11T22:08:46.679Z"
-  },
-  {
-    "id": "1754966987316",
+    "id": "1755056078965",
     "username": "admin",
     "email": "admin@gmail.com",
-    "password": "admin",
+    "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
     "isAdmin": true,
-    "createdAt": "2025-08-12T02:49:47.316Z"
+    "createdAt": "2025-08-13T03:34:38.965Z"
+  },
+  {
+    "id": "1755595892698",
+    "username": "khcuong",
+    "email": "khuongcuong59@gmail.com",
+    "password": "ff523132b105f14272ee22b22776eecd3e3d824aad90fb14bc2c8ffc6de0a0e9",
+    "isAdmin": false,
+    "createdAt": "2025-08-19T09:31:32.698Z"
+  },
+  {
+    "id": "1755596079742",
+    "username": "kyanh",
+    "email": "khuongcuong36@gmail.com",
+    "password": "ff523132b105f14272ee22b22776eecd3e3d824aad90fb14bc2c8ffc6de0a0e9",
+    "isAdmin": false,
+    "createdAt": "2025-08-19T09:34:39.742Z"
   }
 ]

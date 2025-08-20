@@ -1,7 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 
 const usersFile = path.resolve(process.cwd(), 'src/data/users.json');
+
+// Hàm hash mật khẩu bằng SHA256
+function hashPassword(password) {
+    return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 export async function POST(req) {
     try {
@@ -17,12 +23,12 @@ export async function POST(req) {
         if (users.find(u => u.email === email)) {
             return new Response(JSON.stringify({ message: 'Email already exists' }), { status: 400 });
         }
-        // Tạo user mới
+        // Tạo user mới với mật khẩu đã hash
         const newUser = {
             id: Date.now().toString(),
             username,
             email,
-            password,
+            password: hashPassword(password),
             isAdmin: false,
             createdAt: new Date().toISOString(),
         };

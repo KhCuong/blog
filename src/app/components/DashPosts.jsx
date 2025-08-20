@@ -69,21 +69,28 @@ export default function DashPosts() {
         },
         body: JSON.stringify({
           postId: postIdToDelete,
-          userId: user.userId,      // truyền userId để API xác thực
+          userId: user.userId,
           isAdmin: user.isAdmin,
         }),
       });
+
       const data = await res.json();
+
       if (res.ok) {
+        const removedId = postIdToDelete;
         setPostIdToDelete('');
-        // Fetch lại danh sách post mới nhất trước khi phát event
-        if (userRef.current) {
-          await fetchPosts(userRef.current);
+
+        // Nếu API trả về posts đã cập nhật thì dùng luôn, ngược lại filter local
+        if (Array.isArray(data.posts)) {
+          setUserPosts(data.posts);
+        } else {
+          setUserPosts(prev => prev.filter(p => p.id !== removedId));
         }
-        // Phát event để các component khác có thể lắng nghe và cập nhật
+
+        // Phát event để các component khác có thể lắng nghe và cập nhật (nếu cần)
         window.dispatchEvent(new Event('postsChanged'));
       } else {
-        console.log(data.message);
+        console.log(data.message || 'Failed to delete post');
       }
     } catch (error) {
       console.log(error.message);
@@ -104,13 +111,13 @@ export default function DashPosts() {
         <>
           <Table hoverable className='shadow-md'>
             <Table.Head>
-              <Table.HeadCell>Date updated</Table.HeadCell>
-              <Table.HeadCell>Post image</Table.HeadCell>
-              <Table.HeadCell>Post title</Table.HeadCell>
-              <Table.HeadCell>Category</Table.HeadCell>
-              <Table.HeadCell>Delete</Table.HeadCell>
+              <Table.HeadCell>Ngày cập nhật</Table.HeadCell>
+              <Table.HeadCell>Ảnh bài viết</Table.HeadCell>
+              <Table.HeadCell>Tiêu đề bài viết</Table.HeadCell>
+              <Table.HeadCell>Chuyên Mục</Table.HeadCell>
+              <Table.HeadCell>Xóa</Table.HeadCell>
               <Table.HeadCell>
-                <span>Edit</span>
+                <span>Chỉnh sửa</span>
               </Table.HeadCell>
             </Table.Head>
             <Table.Body className='divide-y'>
@@ -145,7 +152,7 @@ export default function DashPosts() {
                         setPostIdToDelete(post.id);
                       }}
                     >
-                      Delete
+                      Xóa
                     </span>
                   </Table.Cell>
                   <Table.Cell>
@@ -153,7 +160,7 @@ export default function DashPosts() {
                       className='text-teal-500 hover:underline'
                       href={`/dashboard/update-post/${post.id}`}
                     >
-                      <span>Edit</span>
+                      <span>Chỉnh sửa</span>
                     </Link>
                   </Table.Cell>
                 </Table.Row>
@@ -162,8 +169,9 @@ export default function DashPosts() {
           </Table>
         </>
       ) : (
-        <p>You have no posts yet!</p>
-      )}
+        <p>Bạn chưa có bài viết nào!</p>
+      )
+      }
       <Modal
         show={showModal}
         onClose={() => setShowModal(false)}
@@ -175,19 +183,19 @@ export default function DashPosts() {
           <div className='text-center'>
             <HiOutlineExclamationCircle className='h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto' />
             <h3 className='mb-5 text-lg text-gray-500 dark:text-gray-400'>
-              Are you sure you want to delete this post?
+              Bạn có chắc chắn muốn xóa bài viết này không?
             </h3>
             <div className='flex justify-center gap-4'>
               <Button color='failure' onClick={handleDeletePost}>
-                Yes, I&apos;m sure
+                Có
               </Button>
               <Button color='gray' onClick={() => setShowModal(false)}>
-                No, cancel
+                Không
               </Button>
             </div>
           </div>
         </Modal.Body>
       </Modal>
-    </div>
+    </div >
   );
 }

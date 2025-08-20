@@ -1,4 +1,3 @@
-
 'use client';
 
 // import { useUser } from '@clerk/nextjs';
@@ -14,7 +13,6 @@ import 'react-circular-progressbar/dist/styles.css';
 // Removed duplicate import of useEffect and useState
 
 export default function UpdatePostPage() {
-
   const [user, setUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [file, setFile] = useState(null);
@@ -22,6 +20,8 @@ export default function UpdatePostPage() {
   const [imageUploadError, setImageUploadError] = useState(null);
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categoryCustom, setCategoryCustom] = useState('');
   const router = useRouter();
   const pathname = usePathname();
   const postId = pathname.split('/').pop();
@@ -54,10 +54,19 @@ export default function UpdatePostPage() {
         console.log(error.message);
       }
     };
-    if (user && user.isAdmin) {
+    // Cho phép mọi user đã login fetch post; API update sẽ kiểm tra quyền thực sự khi submit
+    if (user) {
       fetchPost();
     }
   }, [postId, user]);
+
+  useEffect(() => {
+    // when formData loads, initialize category fields
+    if (formData?.category) {
+      setSelectedCategory(formData.category);
+      setCategoryCustom(''); // default no custom
+    }
+  }, [formData]);
 
   const handleUpdloadImage = async () => {
     try {
@@ -85,6 +94,7 @@ export default function UpdatePostPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const finalCategory = categoryCustom?.trim() || selectedCategory || formData.category;
       const res = await fetch('/api/post/update', {
         method: 'PUT',
         headers: {
@@ -92,6 +102,7 @@ export default function UpdatePostPage() {
         },
         body: JSON.stringify({
           ...formData,
+          category: finalCategory,
           userId: user?.userId,
           isAdmin: user?.isAdmin,
           postId: postId,
@@ -104,6 +115,8 @@ export default function UpdatePostPage() {
       }
       if (res.ok && data.slug) {
         setPublishError('Cập nhật thành công! Đang chuyển trang...');
+        // Phát event để DashPosts cập nhật ngay
+        window.dispatchEvent(new Event('postsChanged'));
         setTimeout(() => {
           setPublishError(null);
           router.push(`/post/${data.slug}`);
@@ -124,7 +137,7 @@ export default function UpdatePostPage() {
     return (
       <div className='p-3 max-w-3xl mx-auto min-h-screen'>
         <h1 className='text-center text-3xl my-7 font-semibold'>
-          Update a post
+          Cập nhật bài viết
         </h1>
         <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
           <div className='flex flex-col gap-4 sm:flex-row justify-between'>
@@ -140,6 +153,13 @@ export default function UpdatePostPage() {
               }
             />
 
+            <div className='flex-1'>
+              <TextInput
+                placeholder='Chuyên mục'
+                value={categoryCustom}
+                onChange={(e) => setCategoryCustom(e.target.value)}
+              />
+            </div>
           </div>
           <div className='flex gap-4 items-center justify-between border-4 border-teal-500 border-dotted p-3'>
             <FileInput
@@ -202,7 +222,7 @@ export default function UpdatePostPage() {
 
   return (
     <h1 className='text-center text-3xl my-7 font-semibold min-h-screen'>
-      You need to be an admin to update a post
+      Bạn cần phải đăng nhập để cập nhật một bài viết
     </h1>
   );
 }

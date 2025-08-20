@@ -1,17 +1,11 @@
 'use client';
 
-import { Sidebar } from 'flowbite-react';
-import {
-  HiArrowSmRight,
-  HiDocumentText,
-  HiOutlineUserGroup,
-  HiChartPie,
-} from 'react-icons/hi';
+
 import { HiUser } from 'react-icons/hi2'; // import riêng nếu nó ở hi2
 
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 
 // Custom useUser hook to mimic Clerk
 function useUser() {
@@ -52,8 +46,8 @@ export default function DashSidebar() {
   }
 
   return (
-    <div className='w-full md:w-56 pt-6 flex flex-col items-center'>
-      <div className='relative w-full flex flex-col items-center'>
+    <div className='w-auto pt-6 flex flex-col items-center'>
+      <div className='relative w-full bottom-[5px] flex flex-col items-center'>
         <img
           src={user.profilePicture || '/avatar.png'}
           alt='avatar'

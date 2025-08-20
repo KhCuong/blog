@@ -1,9 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 export async function POST(req) {
   try {
-    const { username, password, ...rest } = await req.json();
+    const { username, password, oldPassword, ...rest } = await req.json();
     if (!username) {
       return new Response(JSON.stringify({ error: 'Thiếu username.' }), { status: 400 });
     }
@@ -19,12 +24,24 @@ export async function POST(req) {
     if (idx === -1) {
       return new Response(JSON.stringify({ error: 'Không tìm thấy user.' }), { status: 404 });
     }
-    if (password) users[idx].password = password;
+
+    // Nếu cung cấp oldPassword thì xác thực trước khi thay đổi
+    if (oldPassword) {
+      const hashedOld = hashPassword(oldPassword);
+      if (users[idx].password !== hashedOld) {
+        return new Response(JSON.stringify({ error: 'Mật khẩu cũ không đúng.' }), { status: 401 });
+      }
+    }
+
+    if (password) users[idx].password = hashPassword(password);
     Object.assign(users[idx], rest);
     await fs.writeFile(usersPath, JSON.stringify(users, null, 2), 'utf-8');
-    return new Response(JSON.stringify({ success: true, user: users[idx] }), { status: 200 });
+
+    const safeUser = { ...users[idx] };
+    delete safeUser.password;
+    return new Response(JSON.stringify({ success: true, user: safeUser }), { status: 200 });
   } catch (e) {
-    console.error('API /api/user/update-password error:', e);
+    console.error('API /api/auth/update-password error:', e);
     return new Response(JSON.stringify({ error: 'Lỗi hệ thống.' }), { status: 500 });
   }
 }
