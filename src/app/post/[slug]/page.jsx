@@ -2,12 +2,20 @@ import RecentPosts from '@/app/components/RecentPosts';
 import { Button } from 'flowbite-react';
 import Link from 'next/link';
 
+// helper: build absolute URL for server-side fetch
+const getAbsoluteUrl = (p = '/api/post/get') => {
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`);
+  return `${base}${p.startsWith('/') ? p : '/' + p}`;
+};
+
 export default async function PostPage({ params }) {
   let post = null;
   const awaitedParams = typeof params?.then === 'function' ? await params : params;
   const slug = awaitedParams?.slug;
   try {
-    const result = await fetch(process.env.URL + '/api/post/get', {
+    const result = await fetch(getAbsoluteUrl('/api/post/get'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug }),

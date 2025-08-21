@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 // https://dev.to/a7u/reactquill-with-nextjs-478b
 import 'react-quill-new/dist/quill.snow.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
@@ -22,9 +22,11 @@ export default function UpdatePostPage() {
   const [publishError, setPublishError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categoryCustom, setCategoryCustom] = useState('');
+  const [title, setTitle] = useState('');
   const router = useRouter();
   const pathname = usePathname();
   const postId = pathname.split('/').pop();
+  const isMounted = useRef(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -35,37 +37,47 @@ export default function UpdatePostPage() {
   }, []);
 
   useEffect(() => {
+    // always fetch the post when postId changes (do not depend on user)
+    let mounted = true;
     const fetchPost = async () => {
       try {
         const res = await fetch('/api/post/get', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            postId: postId,
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId }),
         });
         const data = await res.json();
-        if (res.ok) {
+        if (!mounted) return;
+        if (res.ok && Array.isArray(data.posts) && data.posts.length) {
           setFormData(data.posts[0]);
+        } else {
+          // if no post found, clear formData to avoid stale values
+          setFormData({});
         }
       } catch (error) {
         console.log(error.message);
+        if (mounted) setFormData({});
       }
     };
-    // Cho phép mọi user đã login fetch post; API update sẽ kiểm tra quyền thực sự khi submit
-    if (user) {
-      fetchPost();
-    }
-  }, [postId, user]);
+    fetchPost();
+    return () => { mounted = false; };
+  }, [postId]);
 
   useEffect(() => {
-    // when formData loads, initialize category fields
-    if (formData?.category) {
-      setSelectedCategory(formData.category);
-      setCategoryCustom(''); // default no custom
+    // when formData loads, initialize category fields ONLY if user hasn't already filled them
+    if (formData && Object.keys(formData).length) {
+      // init title state only if user hasn't typed already
+      if (title === '') setTitle(formData.title || '');
+      if (!selectedCategory) setSelectedCategory(formData.category || '');
+      // only set categoryCustom if it's still empty (so we don't overwrite user's edits)
+      if (categoryCustom === '') setCategoryCustom(formData.category || '');
+      // ensure title is present in formData (controlled input uses formData.title)
+      if (!formData.title && formData.title !== '') {
+        setFormData(prev => ({ ...prev, title: formData.title || '' }));
+      }
     }
+    // mark mounted to avoid accidental resets after initial load
+    isMounted.current = true;
   }, [formData]);
 
   const handleUpdloadImage = async () => {
@@ -95,6 +107,8 @@ export default function UpdatePostPage() {
     e.preventDefault();
     try {
       const finalCategory = categoryCustom?.trim() || selectedCategory || formData.category;
+      const finalTitle = (title && title.trim()) || formData.title;
+      const uid = user?.userId || user?.id || user?._id || user?.userMongoId || null;
       const res = await fetch('/api/post/update', {
         method: 'PUT',
         headers: {
@@ -102,27 +116,33 @@ export default function UpdatePostPage() {
         },
         body: JSON.stringify({
           ...formData,
+          title: finalTitle,
           category: finalCategory,
-          userId: user?.userId,
+          userId: uid,
           isAdmin: user?.isAdmin,
           postId: postId,
         }),
       });
-      const data = await res.json();
+      const parsed = await res.json().catch(() => null);
       if (!res.ok) {
-        setPublishError(data.message);
+        setPublishError((parsed && (parsed.message || parsed.error)) || `HTTP ${res.status}`);
         return;
       }
-      if (res.ok && data.slug) {
+      const updated = parsed && (parsed.post || parsed) || null;
+      if (updated) {
+        setFormData(prev => ({ ...prev, ...updated }));
+        if (updated.title) setTitle(updated.title);
+      }
+      const slugTo = (parsed && (parsed.post?.slug || parsed.slug)) || updated?.slug;
+      if (slugTo) {
         setPublishError('Cập nhật thành công! Đang chuyển trang...');
-        // Phát event để DashPosts cập nhật ngay
         window.dispatchEvent(new Event('postsChanged'));
         setTimeout(() => {
           setPublishError(null);
-          router.push(`/post/${data.slug}`);
-        }, 1000);
+          router.push(`/post/${slugTo}`);
+        }, 800);
       } else {
-        setPublishError('Cập nhật thành công nhưng không lấy được đường dẫn bài viết!');
+        setPublishError('Cập nhật thành công!');
       }
     } catch (error) {
       setPublishError('Something went wrong');
@@ -143,14 +163,12 @@ export default function UpdatePostPage() {
           <div className='flex flex-col gap-4 sm:flex-row justify-between'>
             <TextInput
               type='text'
-              placeholder='Title'
+              placeholder='Tiêu đề'
               required
               id='title'
-              defaultValue={formData.title}
+              value={title}
               className='flex-1'
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
+              onChange={(e) => setTitle(e.target.value)}
             />
 
             <div className='flex-1'>
@@ -199,7 +217,7 @@ export default function UpdatePostPage() {
           )}
           <ReactQuill
             theme='snow'
-            placeholder='Write something...'
+            placeholder='Viết vào đây...'
             className='h-72 mb-12'
             required
             value={formData.content}
@@ -208,7 +226,7 @@ export default function UpdatePostPage() {
             }}
           />
           <Button type='submit' gradientDuoTone='purpleToPink'>
-            Update
+            Cập nhật
           </Button>
           {publishError && (
             <Alert className='mt-5' color='failure'>
@@ -226,3 +244,4 @@ export default function UpdatePostPage() {
     </h1>
   );
 }
+

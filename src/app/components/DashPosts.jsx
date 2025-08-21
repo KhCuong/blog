@@ -1,5 +1,5 @@
 'use client';
-import { Button, Modal, Table } from 'flowbite-react';
+import { Button, Modal, Table, Alert } from 'flowbite-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { HiOutlineExclamationCircle } from 'react-icons/hi';
@@ -9,6 +9,8 @@ export default function DashPosts() {
   const [userPosts, setUserPosts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [postIdToDelete, setPostIdToDelete] = useState('');
+  const [postTitleToDelete, setPostTitleToDelete] = useState('');
+  const [actionError, setActionError] = useState(null);
 
   // Lưu user vào ref để luôn lấy đúng khi fetch lại
   const userRef = useRef(null);
@@ -61,7 +63,14 @@ export default function DashPosts() {
 
   const handleDeletePost = async () => {
     setShowModal(false);
+    if (!user) return;
+    if (!postIdToDelete) return;
     try {
+      const uid = user.userId || user.id || user._id || user.userMongoId || null;
+      if (!uid) {
+        setActionError('Missing user info');
+        return;
+      }
       const res = await fetch('/api/post/delete', {
         method: 'DELETE',
         headers: {
@@ -69,31 +78,44 @@ export default function DashPosts() {
         },
         body: JSON.stringify({
           postId: postIdToDelete,
-          userId: user.userId,
+          userId: uid,
           isAdmin: user.isAdmin,
         }),
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        const removedId = postIdToDelete;
-        setPostIdToDelete('');
-
-        // Nếu API trả về posts đã cập nhật thì dùng luôn, ngược lại filter local
-        if (Array.isArray(data.posts)) {
-          setUserPosts(data.posts);
-        } else {
-          setUserPosts(prev => prev.filter(p => p.id !== removedId));
-        }
-
-        // Phát event để các component khác có thể lắng nghe và cập nhật (nếu cần)
-        window.dispatchEvent(new Event('postsChanged'));
-      } else {
-        console.log(data.message || 'Failed to delete post');
+      // parse response safely (try JSON, fallback to text)
+      let data = null;
+      let textBody = null;
+      try {
+        data = await res.clone().json();
+      } catch (e) {
+        try { textBody = await res.clone().text(); } catch (e2) { /* ignore */ }
       }
+      if (!res.ok) {
+        const msg = (data && (data.message || data.error)) || textBody || `HTTP ${res.status} ${res.statusText}`;
+        console.error('Delete failed:', { status: res.status, message: msg, body: data || textBody });
+        setActionError(msg);
+        setTimeout(() => setActionError(null), 4000);
+        return;
+      }
+      const okData = data || (await res.json().catch(() => null));
+      const removedId = postIdToDelete;
+      setPostIdToDelete('');
+      setPostTitleToDelete('');
+      if (okData && Array.isArray(okData.posts)) {
+        setUserPosts(okData.posts);
+      } else {
+        setUserPosts(prev => prev.filter(p => {
+          const key = p.id || p._id || p.slug;
+          return String(key) !== String(removedId);
+        }));
+      }
+      setActionError(null);
+      window.dispatchEvent(new Event('postsChanged'));
     } catch (error) {
-      console.log(error.message);
+      console.error('Delete exception:', error);
+      setActionError(error?.message || 'Delete failed');
+      setTimeout(() => setActionError(null), 4000);
     }
   };
 
@@ -107,6 +129,7 @@ export default function DashPosts() {
 
   return (
     <div className='table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500'>
+      {actionError && <Alert color='failure' className='mb-4'>{actionError}</Alert>}
       {userPosts.length > 0 ? (
         <>
           <Table hoverable className='shadow-md'>
@@ -122,7 +145,7 @@ export default function DashPosts() {
             </Table.Head>
             <Table.Body className='divide-y'>
               {userPosts.map((post) => (
-                <Table.Row className='bg-white dark:border-gray-700 dark:bg-gray-800' key={post.id}>
+                <Table.Row className='bg-white dark:border-gray-700 dark:bg-gray-800' key={post.id || post._id || post.slug}>
                   <Table.Cell>
                     {new Date(post.updatedAt || post.createdAt).toLocaleDateString()}
                   </Table.Cell>
@@ -148,8 +171,10 @@ export default function DashPosts() {
                     <span
                       className='font-medium text-red-500 hover:underline cursor-pointer'
                       onClick={() => {
+                        const key = post.id || post._id || post.slug;
                         setShowModal(true);
-                        setPostIdToDelete(post.id);
+                        setPostIdToDelete(key);
+                        setPostTitleToDelete(post.title || '');
                       }}
                     >
                       Xóa
@@ -158,7 +183,7 @@ export default function DashPosts() {
                   <Table.Cell>
                     <Link
                       className='text-teal-500 hover:underline'
-                      href={`/dashboard/update-post/${post.id}`}
+                      href={`/dashboard/update-post/${post.id || post._id || post.slug}`}
                     >
                       <span>Chỉnh sửa</span>
                     </Link>
@@ -182,9 +207,10 @@ export default function DashPosts() {
         <Modal.Body>
           <div className='text-center'>
             <HiOutlineExclamationCircle className='h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto' />
-            <h3 className='mb-5 text-lg text-gray-500 dark:text-gray-400'>
+            <h3 className='mb-2 text-lg text-gray-500 dark:text-gray-400'>
               Bạn có chắc chắn muốn xóa bài viết này không?
             </h3>
+            {postTitleToDelete && <div className='mb-4 font-semibold'>{postTitleToDelete}</div>}
             <div className='flex justify-center gap-4'>
               <Button color='failure' onClick={handleDeletePost}>
                 Có

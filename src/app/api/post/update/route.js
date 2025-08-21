@@ -5,10 +5,12 @@ import path from 'path';
 export const PUT = async (req) => {
   try {
     const data = await req.json();
-    // Yêu cầu userId để xác thực (admin vẫn được phép)
-    if (!data || !data.userId) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+    // accept flexible user id fields from client
+    const uid = data && (data.userId || data.userMongoId || data.user?.userId || data.user?.id || data.user?._id);
+    if (!data || !uid) {
+      return new Response(JSON.stringify({ message: 'Unauthorized - missing userId' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+
     // Đọc và cập nhật post trong file posts.json (giả lập localStorage server-side)
     const postsFile = path.join(process.cwd(), 'src/data/posts.json');
     let posts = [];
@@ -17,15 +19,22 @@ export const PUT = async (req) => {
       posts = JSON.parse(fileData || '[]');
     }
     let updatedPost = null;
-    const idx = posts.findIndex(post => post.id === data.postId);
+    // find by id/_id/slug
+    const pid = data.postId;
+    const idx = posts.findIndex(post =>
+      (post.id && String(post.id) === String(pid)) ||
+      (post._id && String(post._id) === String(pid)) ||
+      (post.slug && String(post.slug) === String(pid))
+    );
     if (idx === -1) {
-      return new Response(JSON.stringify({ message: 'Post not found' }), { status: 404 });
+      return new Response(JSON.stringify({ message: 'Post not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
-    // Cho phép cập nhật nếu là admin hoặc là chủ post
     const existing = posts[idx];
-    if (!data.isAdmin && existing.userId !== data.userId) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+    const requesterIsOwner = existing.userId && String(existing.userId) === String(uid);
+    if (!data.isAdmin && !requesterIsOwner) {
+      return new Response(JSON.stringify({ message: 'Unauthorized - not owner' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+
     updatedPost = {
       ...existing,
       title: data.title ?? existing.title,
@@ -36,7 +45,7 @@ export const PUT = async (req) => {
     };
     posts[idx] = updatedPost;
     fs.writeFileSync(postsFile, JSON.stringify(posts, null, 2), 'utf-8');
-    return new Response(JSON.stringify(updatedPost), {
+    return new Response(JSON.stringify({ message: 'Post updated', post: updatedPost, posts }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

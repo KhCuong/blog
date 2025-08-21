@@ -64,6 +64,7 @@ export default function CreatePostPage() {
     e.preventDefault();
     try {
       const finalCategory = categoryCustom?.trim() || selectedCategory;
+      const uid = user?.userId || user?.id || user?._id || user?.userMongoId || null;
       const res = await fetch('/api/post/create', {
         method: 'POST',
         headers: {
@@ -72,7 +73,7 @@ export default function CreatePostPage() {
         body: JSON.stringify({
           ...formData,
           category: finalCategory,
-          userId: user?.userId,
+          userId: uid,
           isAdmin: user?.isAdmin,
         }),
       });
@@ -107,7 +108,7 @@ export default function CreatePostPage() {
           <div className='flex flex-col gap-4 sm:flex-row justify-between'>
             <TextInput
               type='text'
-              placeholder='Title'
+              placeholder='Tiêu đề'
               required
               id='title'
               className='flex-1'
@@ -166,7 +167,7 @@ export default function CreatePostPage() {
 
           <ReactQuill
             theme='snow'
-            placeholder='Write something...'
+            placeholder='Viết vào đây...'
             className='h-72 mb-12'
             required
             onChange={(value) => {

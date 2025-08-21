@@ -1,18 +1,27 @@
 import Link from 'next/link';
+
+// helper: build absolute URL for server-side fetch
+const getAbsoluteUrl = (p = '/api/post/get') => {
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`);
+  return `${base}${p.startsWith('/') ? p : '/' + p}`;
+};
+
 export default async function RecentPosts({ limit = 2 }) {
-  let posts = null;
+  let posts = [];
   try {
-    const base = process.env.NEXT_PUBLIC_URL || process.env.URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`);
-    const result = await fetch(`${base}/api/post/get`, {
+    const res = await fetch(getAbsoluteUrl('/api/post/get'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limit: limit, order: 'desc' }),
+      body: JSON.stringify({ limit }),
       cache: 'no-store',
     });
-    const data = await result.json();
-    posts = data.posts;
+    const data = await res.json();
+    posts = data.posts || [];
   } catch (error) {
-    console.log('Error getting post:', error);
+    console.error('Error getting post:', error);
+    posts = [];
   }
 
   return (

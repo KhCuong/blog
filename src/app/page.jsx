@@ -99,10 +99,9 @@ export default function Home() {
       {/* Hero banner */}
       <section className="hero-banner">
         <div className="hero-inner wrapper">
-          <h1 className="hero-title">Welcome to Our Blog</h1>
+          <h1 className="hero-title">Chào mừng bạn đến với Blog của chúng tôi</h1>
           <p className="hero-sub">
-            Start your blog today and join a community of writers and readers who are passionate about sharing their stories and ideas.
-            We offer everything you need to get started, from helpful tips and tutorials.
+            Bắt đầu blog của bạn hôm nay và tham gia vào cộng đồng những người viết và độc giả đam mê chia sẻ câu chuyện và ý tưởng của họ.
           </p>
         </div>
       </section>
@@ -113,6 +112,28 @@ export default function Home() {
         <div className="mb-6">
           <h2 className="text-2xl font-semibold">Bài viết gần đây</h2>
         </div>
+
+        {/* Mobile categories bar: horizontal chips (only shown on small screens) */}
+        <div className="mobile-cats mb-4 md:hidden">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar py-2">
+            <button
+              className={`cat-chip ${selectedCategory === '' ? 'active' : ''}`}
+              onClick={() => onCategoryClick('')}
+            >
+              Tất cả <span className="ml-2 text-xs text-gray-400">{totalPosts}</span>
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={`cat-chip ${selectedCategory === cat ? 'active' : ''}`}
+                onClick={() => onCategoryClick(cat)}
+              >
+                {cat} <span className="ml-2 text-xs text-gray-400">{categoriesMap[cat]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className='layout-grid grid gap-6 lg:grid-cols-[1fr_280px]'>
           {/* LEFT: vertical list of posts */}
           <div className='posts-column'>

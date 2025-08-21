@@ -65,7 +65,7 @@ export default function DashSidebar() {
             />
             <div
               ref={dropdownRef}
-              className='absolute left-1/2 -translate-x-1/2 mt-2 w-60 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1'
+              className='absolute -translate-x-[40%] mt-12 w-60 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1'
               onClick={e => e.stopPropagation()}
             >
               <div className='flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700 mb-1'>

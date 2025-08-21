@@ -16,11 +16,19 @@
     "createdAt": "2025-08-19T09:31:32.698Z"
   },
   {
-    "id": "1755596079742",
+    "id": "1755690077154",
     "username": "kyanh",
     "email": "khuongcuong36@gmail.com",
-    "password": "ff523132b105f14272ee22b22776eecd3e3d824aad90fb14bc2c8ffc6de0a0e9",
+    "password": "293d5c8e2103f0c7d96cf917b800f8f01a3075f2bbbc720761cf43099725646a",
     "isAdmin": false,
-    "createdAt": "2025-08-19T09:34:39.742Z"
+    "createdAt": "2025-08-20T11:41:17.154Z"
+  },
+  {
+    "id": "1755693592776",
+    "username": "congduc",
+    "email": "khuongcuong18@gmail.com",
+    "password": "293d5c8e2103f0c7d96cf917b800f8f01a3075f2bbbc720761cf43099725646a",
+    "isAdmin": false,
+    "createdAt": "2025-08-20T12:39:52.776Z"
   }
 ]
